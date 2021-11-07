@@ -2,27 +2,26 @@
 # coding: utf-8
 
 # ## **0. Introduction**
-# 
+#
 # I decided to write this kernel because **Titanic: Machine Learning from Disaster** is one of my favorite competitions on Kaggle. This is a beginner level kernel which focuses on **Exploratory Data Analysis** and **Feature Engineering**. A lot of people start Kaggle with this competition and they get lost in extremely long tutorial kernels. This is a short kernel compared to the other ones. I hope this will be a good guide for starters and inspire them with new feature engineering ideas.
-# 
-# **Titanic: Machine Learning from Disaster** is a great competition to apply domain knowledge for feature engineering, so I made a research and learned a lot about Titanic. There are many secrets to be revealed beneath the Titanic dataset. I tried to find out some of those secret factors that had affected the survival of passengers when the Titanic was sinking. I believe there are other features still waiting to be discovered. 
-# 
+#
+# **Titanic: Machine Learning from Disaster** is a great competition to apply domain knowledge for feature engineering, so I made a research and learned a lot about Titanic. There are many secrets to be revealed beneath the Titanic dataset. I tried to find out some of those secret factors that had affected the survival of passengers when the Titanic was sinking. I believe there are other features still waiting to be discovered.
+#
 # This kernel has **3** main sections; **Exploratory Data Analysis**, **Feature Engineering** and **Model**, and it can achieve top **2%** (**0.83732**) public leaderboard score with a tuned Random Forest Classifier. It takes 60 seconds to run whole notebook. If you have any idea that might improve this kernel, please be sure to comment, or fork and experiment as you like. If you didn't understand any part, feel free to ask.
+
+import string
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
-sns.set(style="darkgrid")
-
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 
-import string
-import warnings
+sns.set(style="darkgrid")
 
 warnings.filterwarnings('ignore')
 
@@ -95,12 +94,13 @@ df_test.sample(3)
 # As seen from below, some columns have missing values. `display_missing` function shows the count of missing values in every column in both training and test set.
 # * Training set have missing values in `Age`, `Cabin` and `Embarked` columns
 # * Test set have missing values in `Age`, `Cabin` and `Fare` columns
-# 
+#
 # It is convenient to work on concatenated training and test set while dealing with missing values, otherwise filled data may overfit to training or test set samples. The count of missing values in `Age`, `Embarked` and `Fare` are smaller compared to total sample, but roughly **80%** of the `Cabin` is missing. Missing values in `Age`, `Embarked` and `Fare` can be filled with descriptive statistical measures but that wouldn't work for `Cabin`.
 
 def display_missing(df):
     for col in df.columns.tolist():
-        print('{} column missing values: {}'.format(col, df[col].isnull().sum()))
+        print('{} column missing values: {}'.format(
+            col, df[col].isnull().sum()))
     print('\n')
 
 
@@ -111,8 +111,10 @@ for df in dfs:
 # #### **1.2.1 Age**
 # Missing values in `Age` are filled with median age, but using median age of the whole data set is not a good choice. Median age of `Pclass` groups is the best choice because of its high correlation with `Age` **(0.408106)** and `Survived` **(0.338481)**. It is also more logical to group ages by passenger classes instead of other features.
 
-df_all_corr = df_all.corr().abs().unstack().sort_values(kind="quicksort", ascending=False).reset_index()
-df_all_corr.rename(columns={"level_0": "Feature 1", "level_1": "Feature 2", 0: 'Correlation Coefficient'}, inplace=True)
+df_all_corr = df_all.corr().abs().unstack().sort_values(
+    kind="quicksort", ascending=False).reset_index()
+df_all_corr.rename(columns={"level_0": "Feature 1",
+                            "level_1": "Feature 2", 0: 'Correlation Coefficient'}, inplace=True)
 df_all_corr[df_all_corr['Feature 1'] == 'Age']
 
 # In order to be more accurate, `Sex` feature is used as the second level of `groupby` while filling the missing `Age` values.
@@ -122,11 +124,13 @@ age_by_pclass_sex = df_all.groupby(['Sex', 'Pclass']).median()['Age']
 
 for pclass in range(1, 4):
     for sex in ['female', 'male']:
-        print('Median age of Pclass {} {}s: {}'.format(pclass, sex, age_by_pclass_sex[sex][pclass]))
+        print('Median age of Pclass {} {}s: {}'.format(
+            pclass, sex, age_by_pclass_sex[sex][pclass]))
 print('Median age of all passengers: {}'.format(df_all['Age'].median()))
 
 # Filling the missing values in Age with the medians of Sex and Pclass groups
-df_all['Age'] = df_all.groupby(['Sex', 'Pclass'])['Age'].apply(lambda x: x.fillna(x.median()))
+df_all['Age'] = df_all.groupby(['Sex', 'Pclass'])[
+    'Age'].apply(lambda x: x.fillna(x.median()))
 
 # #### **1.2.2 Embarked**
 # `Embarked` is a categorical feature and there are only **2** missing values in whole data set. Both of those passengers are female, upper class and they have the same ticket number. This means that they know each other and embarked from the same port together. The mode `Embarked` value for an upper class female passenger is **C (Cherbourg)**, but this doesn't necessarily mean that they embarked from that port.
@@ -134,9 +138,9 @@ df_all['Age'] = df_all.groupby(['Sex', 'Pclass'])['Age'].apply(lambda x: x.filln
 df_all[df_all['Embarked'].isnull()]
 
 # When I googled **Stone, Mrs. George Nelson (Martha Evelyn)**, I found that she embarked from **S (Southampton)** with her maid **Amelie Icard**, in this page [Martha Evelyn Stone: Titanic Survivor](https://www.encyclopedia-titanica.org/titanic-survivor/martha-evelyn-stone.html).
-# 
+#
 # > *Mrs Stone boarded the Titanic in Southampton on 10 April 1912 and was travelling in first class with her maid Amelie Icard. She occupied cabin B-28.*
-# 
+#
 # Missing values in `Embarked` are filled with **S** with this information.
 
 # Filling the missing values in Embarked with S
@@ -161,7 +165,8 @@ df_all['Fare'] = df_all['Fare'].fillna(med_fare)
 # * From going **A** to **G**, distance to the staircase increases which might be a factor of survival
 
 # Creating Deck column from the first letter of the Cabin column (M stands for Missing)
-df_all['Deck'] = df_all['Cabin'].apply(lambda s: s[0] if pd.notnull(s) else 'M')
+df_all['Deck'] = df_all['Cabin'].apply(
+    lambda s: s[0] if pd.notnull(s) else 'M')
 
 df_all_decks = df_all.groupby(['Deck', 'Pclass']).count().drop(columns=['Survived', 'Sex', 'Age', 'SibSp', 'Parch',
                                                                         'Fare', 'Embarked', 'Cabin', 'PassengerId',
@@ -171,7 +176,8 @@ df_all_decks = df_all.groupby(['Deck', 'Pclass']).count().drop(columns=['Survive
 
 def get_pclass_dist(df):
     # Creating a dictionary for every passenger class count in every deck
-    deck_counts = {'A': {}, 'B': {}, 'C': {}, 'D': {}, 'E': {}, 'F': {}, 'G': {}, 'M': {}, 'T': {}}
+    deck_counts = {'A': {}, 'B': {}, 'C': {}, 'D': {},
+                   'E': {}, 'F': {}, 'G': {}, 'M': {}, 'T': {}}
     decks = df.columns.levels[0]
 
     for deck in decks:
@@ -187,7 +193,8 @@ def get_pclass_dist(df):
 
     # Creating a dictionary for every passenger class percentage in every deck
     for col in df_decks.columns:
-        deck_percentages[col] = [(count / df_decks[col].sum()) * 100 for count in df_decks[col]]
+        deck_percentages[col] = [
+            (count / df_decks[col].sum()) * 100 for count in df_decks[col]]
 
     return deck_counts, deck_percentages
 
@@ -203,7 +210,8 @@ def display_pclass_dist(percentages):
     pclass3 = df_percentages[2]
 
     plt.figure(figsize=(20, 10))
-    plt.bar(bar_count, pclass1, color='#b5ffb9', edgecolor='white', width=bar_width, label='Passenger Class 1')
+    plt.bar(bar_count, pclass1, color='#b5ffb9', edgecolor='white',
+            width=bar_width, label='Passenger Class 1')
     plt.bar(bar_count, pclass2, bottom=pclass1, color='#f9bc86', edgecolor='white', width=bar_width,
             label='Passenger Class 2')
     plt.bar(bar_count, pclass3, bottom=pclass1 + pclass2, color='#a3acff', edgecolor='white', width=bar_width,
@@ -243,7 +251,8 @@ df_all_decks_survived = df_all.groupby(['Deck', 'Survived']).count().drop(
 
 def get_survived_dist(df):
     # Creating a dictionary for every survival count in every deck
-    surv_counts = {'A': {}, 'B': {}, 'C': {}, 'D': {}, 'E': {}, 'F': {}, 'G': {}, 'M': {}}
+    surv_counts = {'A': {}, 'B': {}, 'C': {},
+                   'D': {}, 'E': {}, 'F': {}, 'G': {}, 'M': {}}
     decks = df.columns.levels[0]
 
     for deck in decks:
@@ -254,7 +263,8 @@ def get_survived_dist(df):
     surv_percentages = {}
 
     for col in df_surv.columns:
-        surv_percentages[col] = [(count / df_surv[col].sum()) * 100 for count in df_surv[col]]
+        surv_percentages[col] = [
+            (count / df_surv[col].sum()) * 100 for count in df_surv[col]]
 
     return surv_counts, surv_percentages
 
@@ -269,7 +279,8 @@ def display_surv_dist(percentages):
     survived = df_survived_percentages[1]
 
     plt.figure(figsize=(20, 10))
-    plt.bar(bar_count, not_survived, color='#b5ffb9', edgecolor='white', width=bar_width, label="Not Survived")
+    plt.bar(bar_count, not_survived, color='#b5ffb9',
+            edgecolor='white', width=bar_width, label="Not Survived")
     plt.bar(bar_count, survived, bottom=not_survived, color='#f9bc86', edgecolor='white', width=bar_width,
             label="Survived")
 
@@ -331,7 +342,8 @@ sns.countplot(df_train['Survived'])
 
 plt.xlabel('Survival', size=15, labelpad=15)
 plt.ylabel('Passenger Count', size=15, labelpad=15)
-plt.xticks((0, 1), ['Not Survived ({0:.2f}%)'.format(not_survived_per), 'Survived ({0:.2f}%)'.format(survived_per)])
+plt.xticks((0, 1), ['Not Survived ({0:.2f}%)'.format(
+    not_survived_per), 'Survived ({0:.2f}%)'.format(survived_per)])
 plt.tick_params(axis='x', labelsize=13)
 plt.tick_params(axis='y', labelsize=13)
 
@@ -347,13 +359,16 @@ df_train_corr = df_train.drop(['PassengerId'], axis=1).corr().abs().unstack().so
 df_train_corr.rename(columns={"level_0": "Feature 1", "level_1": "Feature 2", 0: 'Correlation Coefficient'},
                      inplace=True)
 df_train_corr.drop(df_train_corr.iloc[1::2].index, inplace=True)
-df_train_corr_nd = df_train_corr.drop(df_train_corr[df_train_corr['Correlation Coefficient'] == 1.0].index)
+df_train_corr_nd = df_train_corr.drop(
+    df_train_corr[df_train_corr['Correlation Coefficient'] == 1.0].index)
 
-df_test_corr = df_test.corr().abs().unstack().sort_values(kind="quicksort", ascending=False).reset_index()
+df_test_corr = df_test.corr().abs().unstack().sort_values(
+    kind="quicksort", ascending=False).reset_index()
 df_test_corr.rename(columns={"level_0": "Feature 1", "level_1": "Feature 2", 0: 'Correlation Coefficient'},
                     inplace=True)
 df_test_corr.drop(df_test_corr.iloc[1::2].index, inplace=True)
-df_test_corr_nd = df_test_corr.drop(df_test_corr[df_test_corr['Correlation Coefficient'] == 1.0].index)
+df_test_corr_nd = df_test_corr.drop(
+    df_test_corr[df_test_corr['Correlation Coefficient'] == 1.0].index)
 
 # Training set high correlations
 corr = df_train_corr_nd['Correlation Coefficient'] > 0.1
@@ -383,7 +398,7 @@ plt.show()
 
 # #### **1.5.1 Continuous Features**
 # Both of the continuous features (`Age` and `Fare`) have good split points and spikes for a decision tree to learn. One potential problem for both features is, the distribution has more spikes and bumps in training set, but it is smoother in test set. Model may not be able to generalize to test set because of this reason.
-# 
+#
 # * Distribution of `Age` feature clearly shows that children younger than 15 has a higher survival rate than any of the other age groups
 # * In distribution of `Fare` feature, the survival rate is higher on distribution tails. The distribution also has positive skew because of the extremely large outliers
 
@@ -395,12 +410,16 @@ plt.subplots_adjust(right=1.5)
 
 for i, feature in enumerate(cont_features):
     # Distribution of survival in feature
-    sns.distplot(df_train[~surv][feature], label='Not Survived', hist=True, color='#e74c3c', ax=axs[0][i])
-    sns.distplot(df_train[surv][feature], label='Survived', hist=True, color='#2ecc71', ax=axs[0][i])
+    sns.distplot(df_train[~surv][feature], label='Not Survived',
+                 hist=True, color='#e74c3c', ax=axs[0][i])
+    sns.distplot(df_train[surv][feature], label='Survived',
+                 hist=True, color='#2ecc71', ax=axs[0][i])
 
     # Distribution of feature in dataset
-    sns.distplot(df_train[feature], label='Training Set', hist=False, color='#e74c3c', ax=axs[1][i])
-    sns.distplot(df_test[feature], label='Test Set', hist=False, color='#2ecc71', ax=axs[1][i])
+    sns.distplot(df_train[feature], label='Training Set',
+                 hist=False, color='#e74c3c', ax=axs[1][i])
+    sns.distplot(df_test[feature], label='Test Set',
+                 hist=False, color='#2ecc71', ax=axs[1][i])
 
     axs[0][i].set_xlabel('')
     axs[1][i].set_xlabel('')
@@ -411,16 +430,19 @@ for i, feature in enumerate(cont_features):
 
     axs[0][i].legend(loc='upper right', prop={'size': 20})
     axs[1][i].legend(loc='upper right', prop={'size': 20})
-    axs[0][i].set_title('Distribution of Survival in {}'.format(feature), size=20, y=1.05)
+    axs[0][i].set_title(
+        'Distribution of Survival in {}'.format(feature), size=20, y=1.05)
 
-axs[1][0].set_title('Distribution of {} Feature'.format('Age'), size=20, y=1.05)
-axs[1][1].set_title('Distribution of {} Feature'.format('Fare'), size=20, y=1.05)
+axs[1][0].set_title(
+    'Distribution of {} Feature'.format('Age'), size=20, y=1.05)
+axs[1][1].set_title(
+    'Distribution of {} Feature'.format('Fare'), size=20, y=1.05)
 
 plt.show()
 
 # #### **1.5.2 Categorical Features**
 # Every categorical feature has at least one class with high mortality rate. Those classes are very helpful to predict whether the passenger is a survivor or victim. Best categorical features are `Pclass` and `Sex` because they have the most homogenous distributions.
-# 
+#
 # * Passengers boarded from **Southampton** has a lower survival rate unlike other ports. More than half of the passengers boarded from **Cherbourg** had survived. This observation could be related to `Pclass` feature
 # * `Parch` and `SibSp` features show that passengers with only one family member has a higher survival rate
 
@@ -438,18 +460,20 @@ for i, feature in enumerate(cat_features, 1):
     plt.tick_params(axis='x', labelsize=20)
     plt.tick_params(axis='y', labelsize=20)
 
-    plt.legend(['Not Survived', 'Survived'], loc='upper center', prop={'size': 18})
-    plt.title('Count of Survival in {} Feature'.format(feature), size=20, y=1.05)
+    plt.legend(['Not Survived', 'Survived'],
+               loc='upper center', prop={'size': 18})
+    plt.title('Count of Survival in {} Feature'.format(
+        feature), size=20, y=1.05)
 
 plt.show()
 
 # ### **1.6 Conclusion**
 # Most of the features are correlated with each other. This relationship can be used to create new features with feature transformation and feature interaction. Target encoding could be very useful as well because of the high correlations with `Survived` feature.
-# 
+#
 # Split points and spikes are visible in continuous features. They can be captured easily with a decision tree model, but linear models may not be able to spot them.
-# 
+#
 # Categorical features have very distinct distributions with different survival rates. Those features can be one-hot encoded. Some of those features may be combined with each other to make new features.
-# 
+#
 # Created a new feature called `Deck` and dropped `Cabin` feature at the **Exploratory Data Analysis** part.
 
 df_all = concat_df(df_train, df_test)
@@ -507,7 +531,8 @@ df_all['Family_Size'] = df_all['SibSp'] + df_all['Parch'] + 1
 fig, axs = plt.subplots(figsize=(20, 20), ncols=2, nrows=2)
 plt.subplots_adjust(right=1.5)
 
-sns.barplot(x=df_all['Family_Size'].value_counts().index, y=df_all['Family_Size'].value_counts().values, ax=axs[0][0])
+sns.barplot(x=df_all['Family_Size'].value_counts().index,
+            y=df_all['Family_Size'].value_counts().values, ax=axs[0][0])
 sns.countplot(x='Family_Size', hue='Survived', data=df_all, ax=axs[0][1])
 
 axs[0][0].set_title('Family Size Feature Value Counts', size=20, y=1.05)
@@ -519,13 +544,17 @@ df_all['Family_Size_Grouped'] = df_all['Family_Size'].map(family_map)
 
 sns.barplot(x=df_all['Family_Size_Grouped'].value_counts().index, y=df_all['Family_Size_Grouped'].value_counts().values,
             ax=axs[1][0])
-sns.countplot(x='Family_Size_Grouped', hue='Survived', data=df_all, ax=axs[1][1])
+sns.countplot(x='Family_Size_Grouped', hue='Survived',
+              data=df_all, ax=axs[1][1])
 
-axs[1][0].set_title('Family Size Feature Value Counts After Grouping', size=20, y=1.05)
-axs[1][1].set_title('Survival Counts in Family Size After Grouping', size=20, y=1.05)
+axs[1][0].set_title(
+    'Family Size Feature Value Counts After Grouping', size=20, y=1.05)
+axs[1][1].set_title(
+    'Survival Counts in Family Size After Grouping', size=20, y=1.05)
 
 for i in range(2):
-    axs[i][1].legend(['Not Survived', 'Survived'], loc='upper right', prop={'size': 20})
+    axs[i][1].legend(['Not Survived', 'Survived'],
+                     loc='upper right', prop={'size': 20})
     for j in range(2):
         axs[i][j].tick_params(axis='x', labelsize=20)
         axs[i][j].tick_params(axis='y', labelsize=20)
@@ -535,14 +564,15 @@ for i in range(2):
 plt.show()
 
 # There are too many unique `Ticket` values to analyze, so grouping them up by their frequencies makes things easier.
-# 
+#
 # **How is this feature different than `Family_Size`?** Many passengers travelled along with groups. Those groups consist of friends, nannies, maids and etc. They weren't counted as family, but they used the same ticket.
-# 
+#
 # **Why not grouping tickets by their prefixes?** If prefixes in `Ticket` feature has any meaning, then they are already captured in `Pclass` or `Embarked` features because that could be the only logical information which can be derived from the `Ticket` feature.
-# 
+#
 # According to the graph below, groups with **2**,**3** and **4** members had a higher survival rate. Passengers who travel alone has the lowest survival rate. After **4** group members, survival rate decreases drastically. This pattern is very similar to `Family_Size` feature but there are minor differences. `Ticket_Frequency` values are not grouped like `Family_Size` because that would basically create the same feature with perfect correlation. This kind of feature wouldn't provide any additional information gain.
 
-df_all['Ticket_Frequency'] = df_all.groupby('Ticket')['Ticket'].transform('count')
+df_all['Ticket_Frequency'] = df_all.groupby(
+    'Ticket')['Ticket'].transform('count')
 
 fig, axs = plt.subplots(figsize=(12, 9))
 sns.countplot(x='Ticket_Frequency', hue='Survived', data=df_all)
@@ -553,21 +583,24 @@ plt.tick_params(axis='x', labelsize=15)
 plt.tick_params(axis='y', labelsize=15)
 
 plt.legend(['Not Survived', 'Survived'], loc='upper right', prop={'size': 15})
-plt.title('Count of Survival in {} Feature'.format('Ticket Frequency'), size=15, y=1.05)
+plt.title('Count of Survival in {} Feature'.format(
+    'Ticket Frequency'), size=15, y=1.05)
 
 plt.show()
 
 # ### **2.3 Title & Is Married**
 # `Title` is created by extracting the prefix before `Name` feature. According to graph below, there are many titles that are occuring very few times. Some of those titles doesn't seem correct and they need to be replaced. **Miss**, **Mrs**, **Ms**, **Mlle**, **Lady**, **Mme**, **the Countess**, **Dona** titles are replaced with **Miss/Mrs/Ms** because all of them are female. Values like **Mlle**, **Mme** and **Dona** are actually the name of the passengers, but they are classified as titles because `Name` feature is split by comma. **Dr**, **Col**, **Major**, **Jonkheer**, **Capt**, **Sir**, **Don** and **Rev** titles are replaced with **Dr/Military/Noble/Clergy** because those passengers have similar characteristics. **Master** is a unique title. It is given to male passengers below age **26**. They have the highest survival rate among all males.
-# 
+#
 # `Is_Married` is a binary feature based on the **Mrs** title. **Mrs** title has the highest survival rate among other female titles. This title needs to be a feature because all female titles are grouped with each other.
 
-df_all['Title'] = df_all['Name'].str.split(', ', expand=True)[1].str.split('.', expand=True)[0]
+df_all['Title'] = df_all['Name'].str.split(
+    ', ', expand=True)[1].str.split('.', expand=True)[0]
 df_all['Is_Married'] = 0
 df_all['Is_Married'].loc[df_all['Title'] == 'Mrs'] = 1
 
 fig, axs = plt.subplots(nrows=2, figsize=(20, 20))
-sns.barplot(x=df_all['Title'].value_counts().index, y=df_all['Title'].value_counts().values, ax=axs[0])
+sns.barplot(x=df_all['Title'].value_counts().index,
+            y=df_all['Title'].value_counts().values, ax=axs[0])
 
 axs[0].tick_params(axis='x', labelsize=10)
 axs[1].tick_params(axis='x', labelsize=15)
@@ -582,14 +615,15 @@ df_all['Title'] = df_all['Title'].replace(['Miss', 'Mrs', 'Ms', 'Mlle', 'Lady', 
 df_all['Title'] = df_all['Title'].replace(['Dr', 'Col', 'Major', 'Jonkheer', 'Capt', 'Sir', 'Don', 'Rev'],
                                           'Dr/Military/Noble/Clergy')
 
-sns.barplot(x=df_all['Title'].value_counts().index, y=df_all['Title'].value_counts().values, ax=axs[1])
+sns.barplot(x=df_all['Title'].value_counts().index,
+            y=df_all['Title'].value_counts().values, ax=axs[1])
 axs[1].set_title('Title Feature Value Counts After Grouping', size=20, y=1.05)
 
 plt.show()
 
 
 # ### **2.4 Target Encoding**
-# `extract_surname` function is used for extracting surnames of passengers from the `Name` feature. `Family` feature is created with the extracted surname. This is necessary for grouping passengers in the same family. 
+# `extract_surname` function is used for extracting surnames of passengers from the `Name` feature. `Family` feature is created with the extracted surname. This is necessary for grouping passengers in the same family.
 
 def extract_surname(data):
     families = []
@@ -619,17 +653,21 @@ df_test = df_all.loc[891:]
 dfs = [df_train, df_test]
 
 # `Family_Survival_Rate` is calculated from families in training set since there is no `Survived` feature in test set. A list of family names that are occuring in both training and test set (`non_unique_families`), is created. The survival rate is calculated for families with more than 1 members in that list, and stored in `Family_Survival_Rate` feature.
-# 
+#
 # An extra binary feature `Family_Survival_Rate_NA` is created for families that are unique to the test set. This feature is also necessary because there is no way to calculate those families' survival rate. This feature implies that family survival rate is not applicable to those passengers because there is no way to retrieve their survival rate.
-# 
+#
 # `Ticket_Survival_Rate` and `Ticket_Survival_Rate_NA` features are also created with the same method. `Ticket_Survival_Rate` and `Family_Survival_Rate` are averaged and become `Survival_Rate`, and `Ticket_Survival_Rate_NA` and `Family_Survival_Rate_NA` are also averaged and become `Survival_Rate_NA`.
 
 # Creating a list of families and tickets that are occuring in both training and test set
-non_unique_families = [x for x in df_train['Family'].unique() if x in df_test['Family'].unique()]
-non_unique_tickets = [x for x in df_train['Ticket'].unique() if x in df_test['Ticket'].unique()]
+non_unique_families = [
+    x for x in df_train['Family'].unique() if x in df_test['Family'].unique()]
+non_unique_tickets = [
+    x for x in df_train['Ticket'].unique() if x in df_test['Ticket'].unique()]
 
-df_family_survival_rate = df_train.groupby('Family')['Survived', 'Family', 'Family_Size'].median()
-df_ticket_survival_rate = df_train.groupby('Ticket')['Survived', 'Ticket', 'Ticket_Frequency'].median()
+df_family_survival_rate = df_train.groupby(
+    'Family')['Survived', 'Family', 'Family_Size'].median()
+df_ticket_survival_rate = df_train.groupby(
+    'Ticket')['Survived', 'Ticket', 'Ticket_Frequency'].median()
 
 family_rates = {}
 ticket_rates = {}
@@ -637,12 +675,14 @@ ticket_rates = {}
 for i in range(len(df_family_survival_rate)):
     # Checking a family exists in both training and test set, and has members more than 1
     if df_family_survival_rate.index[i] in non_unique_families and df_family_survival_rate.iloc[i, 1] > 1:
-        family_rates[df_family_survival_rate.index[i]] = df_family_survival_rate.iloc[i, 0]
+        family_rates[df_family_survival_rate.index[i]
+        ] = df_family_survival_rate.iloc[i, 0]
 
 for i in range(len(df_ticket_survival_rate)):
     # Checking a ticket exists in both training and test set, and has members more than 1
     if df_ticket_survival_rate.index[i] in non_unique_tickets and df_ticket_survival_rate.iloc[i, 1] > 1:
-        ticket_rates[df_ticket_survival_rate.index[i]] = df_ticket_survival_rate.iloc[i, 0]
+        ticket_rates[df_ticket_survival_rate.index[i]
+        ] = df_ticket_survival_rate.iloc[i, 0]
 
 mean_survival_rate = np.mean(df_train['Survived'])
 
@@ -661,7 +701,8 @@ for i in range(len(df_train)):
 
 for i in range(len(df_test)):
     if df_test['Family'].iloc[i] in family_rates:
-        test_family_survival_rate.append(family_rates[df_test['Family'].iloc[i]])
+        test_family_survival_rate.append(
+            family_rates[df_test['Family'].iloc[i]])
         test_family_survival_rate_NA.append(1)
     else:
         test_family_survival_rate.append(mean_survival_rate)
@@ -687,7 +728,8 @@ for i in range(len(df_train)):
 
 for i in range(len(df_test)):
     if df_test['Ticket'].iloc[i] in ticket_rates:
-        test_ticket_survival_rate.append(ticket_rates[df_test['Ticket'].iloc[i]])
+        test_ticket_survival_rate.append(
+            ticket_rates[df_test['Ticket'].iloc[i]])
         test_ticket_survival_rate_NA.append(1)
     else:
         test_ticket_survival_rate.append(mean_survival_rate)
@@ -699,15 +741,18 @@ df_test['Ticket_Survival_Rate'] = test_ticket_survival_rate
 df_test['Ticket_Survival_Rate_NA'] = test_ticket_survival_rate_NA
 
 for df in [df_train, df_test]:
-    df['Survival_Rate'] = (df['Ticket_Survival_Rate'] + df['Family_Survival_Rate']) / 2
-    df['Survival_Rate_NA'] = (df['Ticket_Survival_Rate_NA'] + df['Family_Survival_Rate_NA']) / 2
+    df['Survival_Rate'] = (df['Ticket_Survival_Rate'] +
+                           df['Family_Survival_Rate']) / 2
+    df['Survival_Rate_NA'] = (
+                                     df['Ticket_Survival_Rate_NA'] + df['Family_Survival_Rate_NA']) / 2
 
 # ### **2.5 Feature Transformation**
 
 # #### **2.5.1 Label Encoding Non-Numerical Features**
 # `Embarked`, `Sex`, `Deck` , `Title` and `Family_Size_Grouped` are object type, and `Age` and `Fare` features are category type. They are converted to numerical type with `LabelEncoder`. `LabelEncoder` basically labels the classes from **0** to **n**. This process is necessary for models to learn from those features.
 
-non_numeric_features = ['Embarked', 'Sex', 'Deck', 'Title', 'Family_Size_Grouped', 'Age', 'Fare']
+non_numeric_features = ['Embarked', 'Sex', 'Deck',
+                        'Title', 'Family_Size_Grouped', 'Age', 'Fare']
 
 for df in dfs:
     for feature in non_numeric_features:
@@ -716,12 +761,14 @@ for df in dfs:
 # #### **2.5.2 One-Hot Encoding the Categorical Features**
 # The categorical features (`Pclass`, `Sex`, `Deck`, `Embarked`, `Title`) are converted to one-hot encoded features with `OneHotEncoder`. `Age` and `Fare` features are not converted because they are ordinal unlike the previous ones.
 
-cat_features = ['Pclass', 'Sex', 'Deck', 'Embarked', 'Title', 'Family_Size_Grouped']
+cat_features = ['Pclass', 'Sex', 'Deck',
+                'Embarked', 'Title', 'Family_Size_Grouped']
 encoded_features = []
 
 for df in dfs:
     for feature in cat_features:
-        encoded_feat = OneHotEncoder().fit_transform(df[feature].values.reshape(-1, 1)).toarray()
+        encoded_feat = OneHotEncoder().fit_transform(
+            df[feature].values.reshape(-1, 1)).toarray()
         n = df[feature].nunique()
         cols = ['{}_{}'.format(feature, n) for n in range(1, n + 1)]
         encoded_df = pd.DataFrame(encoded_feat, columns=cols)
@@ -733,9 +780,9 @@ df_test = pd.concat([df_test, *encoded_features[6:]], axis=1)
 
 # ### **2.6 Conclusion**
 # `Age` and `Fare` features are binned. Binning helped dealing with outliers and it revealed some homogeneous groups in those features. `Family_Size` is created by adding `Parch` and `SibSp` features and **1**. `Ticket_Frequency` is created by counting the occurence of `Ticket` values.
-# 
+#
 # `Name` feature is very useful. First, `Title` and `Is_Married` features are created from the title prefix in the names. Second, `Family_Survival_Rate` and `Family_Survival_Rate_NA`  features are created by target encoding the surname of the passengers. `Ticket_Survival_Rate` is created by target encoding the `Ticket` feature. `Survival_Rate` feature is created by averaging the `Family_Survival_Rate` and `Ticket_Survival_Rate` features.
-# 
+#
 # Finally, the non-numeric type features are label encoded and categorical features are one-hot encoded. Created **5** new features (`Family_Size`, `Title`, `Is_Married`, `Survival_Rate` and `Survival_Rate_NA`) and dropped the useless features after encoding.
 
 df_all = concat_df(df_train, df_test)
@@ -759,12 +806,12 @@ print('X_test shape: {}'.format(X_test.shape))
 
 # ### **3.1 Random Forest**
 # Created 2 `RandomForestClassifier`'s. One of them is a single model and the other is for k-fold cross validation.
-# 
+#
 # The highest accuracy of the `single_best_model` is **0.82775** in public leaderboard. However, it doesn't perform better in k-fold cross validation. It is a good model to start experimenting and hyperparameter tuning.
-# 
+#
 # The highest accuracy of `leaderboard_model` is **0.83732** in public leaderboard with 5-fold cross validation. This model is created for leaderboard score and it is tuned to overfit slightly. It is designed to overfit because the estimated probabilities of `X_test` in every fold are going to be divided by **N** (fold count). If this model is used as a single model, it would struggle to predict lots of samples correctly.
-# 
-# **Which model should I use?** 
+#
+# **Which model should I use?**
 # * `leaderboard_model` overfits to test set so it's not suggested to use models like this in real life projects.
 # * `single_best_model` is a good model to start experimenting and learning about decision trees.
 
@@ -822,8 +869,10 @@ for fold, (trn_idx, val_idx) in enumerate(skf.split(X_train, y_train), 1):
     tprs.append(val_tpr)
 
     # X_test probabilities
-    probs.loc[:, 'Fold_{}_Prob_0'.format(fold)] = leaderboard_model.predict_proba(X_test)[:, 0]
-    probs.loc[:, 'Fold_{}_Prob_1'.format(fold)] = leaderboard_model.predict_proba(X_test)[:, 1]
+    probs.loc[:, 'Fold_{}_Prob_0'.format(
+        fold)] = leaderboard_model.predict_proba(X_test)[:, 0]
+    probs.loc[:, 'Fold_{}_Prob_1'.format(
+        fold)] = leaderboard_model.predict_proba(X_test)[:, 1]
     importances.iloc[:, fold - 1] = leaderboard_model.feature_importances_
 
     oob += leaderboard_model.oob_score_ / N
@@ -861,10 +910,12 @@ def plot_roc_curve(fprs, tprs):
         tprs_interp[-1][0] = 0.0
         roc_auc = auc(fpr, tpr)
         aucs.append(roc_auc)
-        ax.plot(fpr, tpr, lw=1, alpha=0.3, label='ROC Fold {} (AUC = {:.3f})'.format(i, roc_auc))
+        ax.plot(fpr, tpr, lw=1, alpha=0.3,
+                label='ROC Fold {} (AUC = {:.3f})'.format(i, roc_auc))
 
     # Plotting ROC for random guessing
-    plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', alpha=0.8, label='Random Guessing')
+    plt.plot([0, 1], [0, 1], linestyle='--', lw=2,
+             color='r', alpha=0.8, label='Random Guessing')
 
     mean_tpr = np.mean(tprs_interp, axis=0)
     mean_tpr[-1] = 1.0
@@ -879,7 +930,8 @@ def plot_roc_curve(fprs, tprs):
     std_tpr = np.std(tprs_interp, axis=0)
     tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
     tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-    ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2, label='$\pm$ 1 std. dev.')
+    ax.fill_between(mean_fpr, tprs_lower, tprs_upper,
+                    color='grey', alpha=.2, label='$\pm$ 1 std. dev.')
 
     ax.set_xlabel('False Positive Rate', size=15, labelpad=20)
     ax.set_ylabel('True Positive Rate', size=15, labelpad=20)
