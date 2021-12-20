@@ -13,7 +13,7 @@ jobs:
     - name: Print folder contents
       run: ls
     - name: Run tests
-      run: python -m pytes --conv
+      run: python -m pytest --conv
     - name: Linters check
       continue-on-error: true
       run: flake8 ./scripts ./tests ./utils
