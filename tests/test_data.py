@@ -1,12 +1,20 @@
+import pytest
+
 from scripts.load_data import get_test
 from scripts.load_data import get_train
 
 
-def test_test_data_load():
-    test = get_test('data/raw/test.csv')
-    assert len(test.columns) > 0
-
-
-def test_train_data_load():
+@pytest.fixture
+def data_load():
     train = get_train('data/raw/train.csv')
-    assert len(train.columns) > 0
+    test = get_test('data/raw/test.csv')
+    return train, test
+
+
+def test_load(data_load):
+    assert len(data_load) == 2
+
+
+def test_columns(data_load):
+    train, test = data_load
+    assert 'Name' in train and 'Name' in test

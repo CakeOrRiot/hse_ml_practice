@@ -11,16 +11,17 @@ from utils.utils import concat_df
 
 class DataProcessor:
 
-    def __init__(self, train, test):
+    def __init__(self, train, test, path):
         self._train = train
         self._test = test
         self.drop_cols = ['Deck', 'Embarked', 'Family', 'Family_Size', 'Family_Size_Grouped', 'Survived',
                           'Name', 'Parch', 'PassengerId', 'Pclass', 'Sex', 'SibSp', 'Ticket', 'Title',
                           'Ticket_Survival_Rate', 'Family_Survival_Rate', 'Ticket_Survival_Rate_NA',
                           'Family_Survival_Rate_NA']
+        self.path = path
         self.clear_data()
 
-    def clear_data(self):
+    def clear_data(self, ):
         df_all = concat_df(self._train, self._test)
         df_all_corr = df_all.corr().abs().unstack().sort_values(
             kind="quicksort", ascending=False).reset_index()
@@ -210,8 +211,8 @@ class DataProcessor:
         df_train = out_schema(df_train)
         df_test = out_schema(df_test)
 
-        df_train.to_csv('../data/processed/train.csv')
-        df_test.to_csv('../data/processed/test.csv')
+        df_train.to_csv(f'{self.path}/processed/train.csv')
+        df_test.to_csv(f'{self.path}/processed/test.csv')
 
         self._train = df_train
         self._test = df_test
