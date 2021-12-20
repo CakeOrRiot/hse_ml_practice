@@ -1,0 +1,23 @@
+name: testing
+on: [push]
+jobs:
+  run_tests:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions/setup-python@v2
+      with:
+          python-version: '3.8.10'
+    - name: Install requirements
+      run: pip install -r requirements.txt
+    - name: Print folder contents
+      run: ls
+    - name: Run tests
+      run: python -m pytest --cov
+    - name: Linters check
+      continue-on-error: true
+      run: flake8 ./scripts ./tests ./utils
+    - name: Security
+      continue-on-error: true
+      run: bandit -r ./scripts ./tests ./utils
+

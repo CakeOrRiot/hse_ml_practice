@@ -4,3 +4,8 @@ numpy
 pandas
 matplotlib
 seaborn
+pandera
+pytest
+pytest-cov
+flake8
+bandit

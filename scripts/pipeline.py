@@ -1,15 +1,26 @@
-import load_data
-from clear_data import clear_data
-from model import Model
-from utils import concat_df
+import pandas as pd
+
+from scripts import load_data
+from scripts.clear_data import DataProcessor
+from scripts.model import Model
 
 
-def run():
-    train, test = load_data.get_data()
-    X_train, y_train, X_test = clear_data(concat_df(train, test))
-    model = Model()
-    pred = model.fit_predict(X_train, y_train, X_test)
-    return pred
+class Pipeline:
+    def __init__(self, path):
+        self.path = path
+
+    def run(self):
+        train, test = load_data.get_train(f'{self.path}/raw/train.csv'), load_data.get_test(f'{self.path}/raw/test.csv')
+
+        processor = DataProcessor(train, test, self.path)
+        X_train, y_train, X_test = processor.get_data()
+
+        model = Model()
+        pred = model.fit_predict(X_train, y_train, X_test)
+        result = pd.DataFrame(data=pred)
+        result.to_csv(f'{self.path}/submission.csv')
+        return result
 
 
-run()
+if __name__ == '__main__':
+    Pipeline('../data').run()
