@@ -2,9 +2,10 @@ import string
 
 import numpy as np
 import pandas as pd
+import pandera as pa
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 
-from utils.schemas import *
+from utils.schemas import out_schema
 from utils.utils import concat_df
 
 
