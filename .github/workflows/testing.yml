@@ -16,5 +16,6 @@ jobs:
       run: pytest --cov
     - name: Linters check
       run: flake8 ./scripts ./tests ./utils
-    -name: Security check
+    - name: Security
       run: bandit -r ./scripts ./tests ./utils
+
