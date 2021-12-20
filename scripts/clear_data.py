@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 
-from schemas import *
-from utils import concat_df
+from utils.schemas import *
+from utils.utils import concat_df
 
 
 class DataProcessor:

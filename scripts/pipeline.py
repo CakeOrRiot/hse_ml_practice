@@ -6,7 +6,7 @@ from model import Model
 
 
 def pipeline():
-    train, test = load_data.get_train(), load_data.get_test()
+    train, test = load_data.get_train('../data/raw/train.csv'), load_data.get_test('../data/raw/test.csv')
 
     processor = DataProcessor(train, test)
     X_train, y_train, X_test = processor.get_data()
