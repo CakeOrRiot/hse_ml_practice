@@ -18,5 +18,6 @@ jobs:
       continue-on-error: true
       run: flake8 ./scripts ./tests ./utils
     - name: Security
+      continue-on-error: true
       run: bandit -r ./scripts ./tests ./utils
 
