@@ -18,3 +18,7 @@ def test_load(data_load):
 def test_columns(data_load):
     train, test = data_load
     assert 'Name' in train and 'Name' in test
+    expected = {'PassengerId', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Ticket', 'Fare', 'Cabin',
+                      'Embarked','Survived'}
+    assert set(train.columns) == expected
+    assert set(test.columns).issubset(expected)
