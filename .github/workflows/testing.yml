@@ -15,6 +15,7 @@ jobs:
     - name: Run tests
       run: pytest --cov
     - name: Linters check
+      continue-on-error: true
       run: flake8 ./scripts ./tests ./utils
     - name: Security
       run: bandit -r ./scripts ./tests ./utils
